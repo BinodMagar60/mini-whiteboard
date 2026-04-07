@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect, useState } from "react";
-import { CropRect } from "@/types/whiteboard";
+import type { CropRect } from "../types/whiteboard";
 
 type CropHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "move";
 

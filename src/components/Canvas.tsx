@@ -3,7 +3,7 @@ import { useRef, useEffect, useCallback } from "react";
 
 import rough from "roughjs";
 import { getElementBounds, getHandlePositions, HANDLE_SIZE } from "../hooks/useSelection";
-import type { WhiteboardElement } from "../types/whiteboard";
+import type { Point, WhiteboardElement } from "../types/whiteboard";
 
 // Global image cache for rendering images on canvas
 export const imageCache = new Map<string, HTMLImageElement>();

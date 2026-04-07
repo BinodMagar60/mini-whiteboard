@@ -4,12 +4,10 @@ import type { CropRect } from "../types/whiteboard";
 type CropHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "move";
 
 interface CropOverlayProps {
-  /** Screen-space position/size of the image element */
   imageScreenX: number;
   imageScreenY: number;
   imageScreenW: number;
   imageScreenH: number;
-  /** Current crop rect (0-1 relative) */
   initialCrop: CropRect;
   onApply: (crop: CropRect) => void;
   onCancel: () => void;

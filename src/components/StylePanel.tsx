@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import type { Tool } from "../types/whiteboard";
 
 interface StylePanelProps {
@@ -47,20 +47,21 @@ export function StylePanel({
   opacity, setOpacity, fontSize, setFontSize, fontWeight, setFontWeight, fontStyle, setFontStyle,
   fontFamily, setFontFamily,
 }: StylePanelProps) {
-  const [showFill, setShowFill] = useState(false);
 
-  // Hide panel for tools that don't need styling
   if (HIDDEN_TOOLS.includes(tool)) return null;
 
-  const showStroke = true; // All visible tools have color
+  const showStroke = tool !== "image";
   const showFillSection = FILL_TOOLS.includes(tool);
   const showWidth = STROKE_WIDTH_TOOLS.includes(tool);
   const isText = tool === "text";
 
   return (
     <div
-      onMouseDown={e => e.preventDefault()}
-      className="fixed left-4 top-20 z-50 flex flex-col gap-3 rounded-xl bg-toolbar-bg border border-border p-3 shadow-lg shadow-toolbar-shadow/20 max-w-[180px]"
+      onMouseDown={e => {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT") e.preventDefault();
+      }}
+      className="fixed left-4 top-20 z-50 flex flex-col gap-3 rounded-xl bg-toolbar-bg border border-border p-3 shadow-lg shadow-toolbar-shadow/20 max-w-45"
     >
 
       {/* Color */}
@@ -74,20 +75,19 @@ export function StylePanel({
               <button
                 key={color}
                 onClick={() => setStrokeColor(color)}
-                className={`w-6 h-6 rounded-md border-2 transition-all ${
-                  strokeColor === color ? "border-primary scale-110" : "border-transparent hover:scale-105"
-                }`}
+                className={`w-6 h-6 rounded-md border-2 transition-all ${strokeColor === color ? "border-primary scale-110" : "border-transparent hover:scale-105"
+                  }`}
                 style={{ backgroundColor: color, boxShadow: color === "#ffffff" ? "inset 0 0 0 1px hsl(var(--border))" : undefined }}
               />
             ))}
           </div>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-1">
             <label className="text-[10px] text-muted-foreground">Custom</label>
             <input
               type="color"
               value={strokeColor}
               onChange={e => setStrokeColor(e.target.value)}
-              className="w-6 h-6 rounded cursor-pointer border border-border bg-transparent p-0"
+              className="w-6 h-6 cursor-pointer bg-transparent p-0"
             />
             <span className="text-[10px] text-muted-foreground font-mono">{strokeColor}</span>
           </div>
@@ -97,48 +97,43 @@ export function StylePanel({
       {/* Fill color - only for shapes */}
       {showFillSection && (
         <div>
-          <button
-            onClick={() => setShowFill(!showFill)}
+          <div
             className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2 hover:text-foreground transition-colors"
           >
-            Fill {showFill ? "▾" : "▸"}
-          </button>
-          {showFill && (
-            <>
-              <div className="grid grid-cols-5 gap-1.5">
-                <button
-                  onClick={() => setFillColor("transparent")}
-                  className={`w-6 h-6 rounded-md border-2 transition-all relative overflow-hidden ${
-                    fillColor === "transparent" ? "border-primary scale-110" : "border-transparent hover:scale-105"
+            Fill
+          </div>
+          <>
+            <div className="grid grid-cols-5 gap-1.5">
+              <button
+                onClick={() => setFillColor("transparent")}
+                className={`w-6 h-6 rounded-md border-2 transition-all relative overflow-hidden ${fillColor === "transparent" ? "border-primary scale-110" : "border-transparent hover:scale-105"
                   }`}
-                  style={{ background: "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, transparent 0% 50%) 50% / 8px 8px" }}
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-4 h-[1.5px] bg-destructive rotate-45 rounded" />
-                  </div>
-                </button>
-                {COLORS.map(color => (
-                  <button
-                    key={`fill-${color}`}
-                    onClick={() => setFillColor(color)}
-                    className={`w-6 h-6 rounded-md border-2 transition-all ${
-                      fillColor === color ? "border-primary scale-110" : "border-transparent hover:scale-105"
+                style={{ background: "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, transparent 0% 50%) 50% / 8px 8px" }}
+              >
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-4 h-[1.5px] bg-destructive rotate-45 rounded" />
+                </div>
+              </button>
+              {COLORS.map(color => (
+                <button
+                  key={`fill-${color}`}
+                  onClick={() => setFillColor(color)}
+                  className={`w-6 h-6 rounded-md border-2 transition-all ${fillColor === color ? "border-primary scale-110" : "border-transparent hover:scale-105"
                     }`}
-                    style={{ backgroundColor: color, opacity: 0.6, boxShadow: color === "#ffffff" ? "inset 0 0 0 1px hsl(var(--border))" : undefined }}
-                  />
-                ))}
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <label className="text-[10px] text-muted-foreground">Custom</label>
-                <input
-                  type="color"
-                  value={fillColor === "transparent" ? "#ffffff" : fillColor}
-                  onChange={e => setFillColor(e.target.value)}
-                  className="w-6 h-6 rounded cursor-pointer border border-border bg-transparent p-0"
+                  style={{ backgroundColor: color, opacity: 0.6, boxShadow: color === "#ffffff" ? "inset 0 0 0 1px hsl(var(--border))" : undefined }}
                 />
-              </div>
-            </>
-          )}
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-[10px] text-muted-foreground">Custom</label>
+              <input
+                type="color"
+                value={fillColor === "transparent" ? "#ffffff" : fillColor}
+                onChange={e => setFillColor(e.target.value)}
+                className="w-6 h-6 cursor-pointer rounded-md bg-transparent p-0 border-none overflow-hidden"
+              />
+            </div>
+          </>
         </div>
       )}
 
@@ -151,11 +146,10 @@ export function StylePanel({
               <button
                 key={w}
                 onClick={() => setStrokeWidth(w)}
-                className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
-                  strokeWidth === w
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-toolbar-hover"
-                }`}
+                className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${strokeWidth === w
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-toolbar-hover"
+                  }`}
               >
                 <div
                   className="rounded-full bg-current"
@@ -177,11 +171,10 @@ export function StylePanel({
                 <button
                   key={s}
                   onClick={() => setFontSize(s)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                    fontSize === s
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-toolbar-hover"
-                  }`}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-medium transition-all ${fontSize === s
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-toolbar-hover"
+                    }`}
                 >
                   {s}
                 </button>
@@ -193,25 +186,37 @@ export function StylePanel({
             <div className="flex gap-1.5">
               <button
                 onClick={() => setFontWeight(fontWeight === "bold" ? "normal" : "bold")}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                  fontWeight === "bold"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-toolbar-hover"
-                }`}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${fontWeight === "bold"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-toolbar-hover"
+                  }`}
               >
                 B
               </button>
               <button
                 onClick={() => setFontStyle(fontStyle === "italic" ? "normal" : "italic")}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] italic transition-all ${
-                  fontStyle === "italic"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-toolbar-hover"
-                }`}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] italic transition-all ${fontStyle === "italic"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-toolbar-hover"
+                  }`}
               >
                 I
               </button>
             </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Font</p>
+            <select
+              value={fontFamily}
+              onChange={e => setFontFamily(e.target.value)}
+              className="w-full rounded-lg border border-border bg-transparent px-2 py-1.5 text-[11px] text-foreground"
+            >
+              {FONT_FAMILIES.map(font => (
+                <option key={font.value} value={font.value}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       )}

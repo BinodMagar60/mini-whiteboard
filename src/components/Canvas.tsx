@@ -106,7 +106,7 @@ export function Canvas({ elements, offset, scale, selectedId, onMouseDown, onMou
   return (
     <canvas
       ref={canvasRef}
-      className="w-full h-full absolute inset-0"
+      className="w-full h-full absolute inset-0 top-0 left-0"
       style={{ cursor }}
       onMouseDown={e => { const { x, y } = getCoords(e); onMouseDown(x, y); }}
       onMouseMove={e => { const { x, y } = getCoords(e); onMouseMove(x, y); }}

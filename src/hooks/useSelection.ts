@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { WhiteboardElement, Point } from "@/types/whiteboard";
+import type { WhiteboardElement, Point } from "../types/whiteboard";
 
 export type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 

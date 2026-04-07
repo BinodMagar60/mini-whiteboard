@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Tool, WhiteboardElement, Point } from "@/types/whiteboard";
+import type { Tool, WhiteboardElement, Point } from "../types/whiteboard";
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
@@ -99,7 +99,7 @@ export function useWhiteboard() {
     };
     currentElement.current = newElement;
     setElements(prev => [...prev, newElement]);
-  }, [tool, strokeColor, fillColor, strokeWidth, roughStyle, screenToCanvas, elements, pushHistory]);
+  }, [tool, strokeColor, fillColor, strokeWidth, opacity, roughStyle, screenToCanvas, elements, pushHistory]);
 
   const continueDrawing = useCallback((screenX: number, screenY: number) => {
     if (!isDrawing.current) return;

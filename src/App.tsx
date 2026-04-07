@@ -1,11 +1,13 @@
 import { useEffect, useCallback, useRef, useState } from "react";
-import { useWhiteboard } from "@/hooks/useWhiteboard";
-import { useSelection } from "@/hooks/useSelection";
-import { Toolbar } from "./Toolbar";
-import { StylePanel } from "./StylePanel";
-import { Canvas, drawElement, imageCache } from "./Canvas";
-import { Tool, WhiteboardElement, CropRect } from "@/types/whiteboard";
-import { CropOverlay } from "./CropOverlay";
+import type { CropRect, Tool, WhiteboardElement } from "./types/whiteboard";
+import { useWhiteboard } from "./hooks/useWhiteboard";
+import { useSelection } from "./hooks/useSelection";
+import { Canvas, drawElement, imageCache } from "./components/Canvas";
+import { Toolbar } from "./components/Toolbar";
+import { StylePanel } from "./components/StylePanel";
+import { CropOverlay } from "./components/CropOverlay";
+import { Info } from "lucide-react";
+import InformationCard from "./components/InformationCard";
 
 function getElementsBounds(elements: WhiteboardElement[]) {
   if (elements.length === 0) return null;
@@ -31,66 +33,6 @@ function getElementsBounds(elements: WhiteboardElement[]) {
   return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 }
 
-function exportSVG(elements: WhiteboardElement[], filename: string = "whiteboard") {
-  const bounds = getElementsBounds(elements);
-  if (!bounds) return;
-  const pad = 40;
-  const w = bounds.width + pad * 2, h = bounds.height + pad * 2;
-  const ox = -bounds.minX + pad, oy = -bounds.minY + pad;
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">\n`;
-  elements.forEach(el => {
-    const style = `stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" fill="${el.fillColor && el.fillColor !== 'transparent' ? el.fillColor : 'none'}" opacity="${el.opacity}" stroke-linecap="round" stroke-linejoin="round"`;
-    switch (el.type) {
-      case "pencil":
-        if (el.points.length < 2) break;
-        svg += `<path d="M${el.points.map(p => `${p.x + ox} ${p.y + oy}`).join(' L')}" ${style} fill="none"/>\n`;
-        break;
-      case "line":
-        svg += `<line x1="${el.x + ox}" y1="${el.y + oy}" x2="${el.x + el.width + ox}" y2="${el.y + el.height + oy}" ${style}/>\n`;
-        break;
-      case "arrow": {
-        const ex = el.x + el.width + ox, ey = el.y + el.height + oy;
-        const angle = Math.atan2(el.height, el.width);
-        const hl = 15;
-        svg += `<line x1="${el.x + ox}" y1="${el.y + oy}" x2="${ex}" y2="${ey}" ${style}/>\n`;
-        svg += `<path d="M${ex} ${ey} L${ex - hl * Math.cos(angle - Math.PI / 6)} ${ey - hl * Math.sin(angle - Math.PI / 6)} M${ex} ${ey} L${ex - hl * Math.cos(angle + Math.PI / 6)} ${ey - hl * Math.sin(angle + Math.PI / 6)}" ${style} fill="none"/>\n`;
-        break;
-      }
-      case "rectangle":
-        svg += `<rect x="${Math.min(el.x, el.x + el.width) + ox}" y="${Math.min(el.y, el.y + el.height) + oy}" width="${Math.abs(el.width)}" height="${Math.abs(el.height)}" ${style}/>\n`;
-        break;
-      case "ellipse":
-        svg += `<ellipse cx="${el.x + el.width / 2 + ox}" cy="${el.y + el.height / 2 + oy}" rx="${Math.abs(el.width / 2)}" ry="${Math.abs(el.height / 2)}" ${style}/>\n`;
-        break;
-      case "diamond": {
-        const cx = el.x + el.width / 2 + ox, cy = el.y + el.height / 2 + oy;
-        svg += `<polygon points="${cx},${el.y + oy} ${el.x + el.width + ox},${cy} ${cx},${el.y + el.height + oy} ${el.x + ox},${cy}" ${style}/>\n`;
-        break;
-      }
-      case "text":
-        if (el.text) {
-          const fSize = el.fontSize || 16;
-          const lines = el.text.split("\n");
-          lines.forEach((line, i) => {
-            svg += `<text x="${el.x + ox}" y="${el.y + oy + i * fSize * 1.3 + fSize}" fill="${el.strokeColor}" font-family="sans-serif" font-size="${fSize}" font-weight="${el.fontWeight || 'normal'}" font-style="${el.fontStyle || 'normal'}">${line}</text>\n`;
-          });
-        }
-        break;
-      case "image":
-        if (el.imageSrc) {
-          svg += `<image x="${el.x + ox}" y="${el.y + oy}" width="${Math.abs(el.width)}" height="${Math.abs(el.height)}" href="${el.imageSrc}" preserveAspectRatio="none" opacity="${el.opacity}"/>\n`;
-        }
-        break;
-    }
-  });
-  svg += `</svg>`;
-  const blob = new Blob([svg], { type: "image/svg+xml" });
-  const link = document.createElement("a");
-  link.download = `${filename}.svg`;
-  link.href = URL.createObjectURL(blob);
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
 
 const BASE_CURSOR_MAP: Record<Tool, string> = {
   select: "default",
@@ -106,7 +48,7 @@ const BASE_CURSOR_MAP: Record<Tool, string> = {
   image: "default",
 };
 
-/** Measure text element dimensions using an offscreen canvas */
+/*Measure text element dimensions using an offscreen canvas */
 function measureTextElement(text: string, fontSize: number, fontWeight: string, fontStyle: string): { width: number; height: number } {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
@@ -136,7 +78,7 @@ function isPointInTextElement(point: { x: number; y: number }, el: WhiteboardEle
   );
 }
 
-export function App() {
+export default function App() {
   const wb = useWhiteboard();
   const selection = useSelection({
     elements: wb.elements,
@@ -148,7 +90,7 @@ export function App() {
   const clipboardRef = useRef<WhiteboardElement | null>(null);
   const [dynamicCursor, setDynamicCursor] = useState<string | null>(null);
   const [cropState, setCropState] = useState<{ elementId: string } | null>(null);
-
+  const [helpOpen, setHelpOpen] = useState<boolean>(false)
   // Text editing state
   const [textEditor, setTextEditor] = useState<{
     screenX: number;
@@ -395,10 +337,7 @@ export function App() {
   }, [wb, textEditor, selection]);
 
   const handleExport = useCallback((format: "png-transparent" | "png-white" | "svg", filename: string) => {
-    if (format === "svg") {
-      exportSVG(wb.elements, filename);
-      return;
-    }
+
     const canvas = document.createElement("canvas");
     const bounds = getElementsBounds(wb.elements);
     if (!bounds) return;
@@ -499,11 +438,39 @@ export function App() {
     transformOrigin: "top left",
   } : {};
 
+  const selectedEl = selection.selectedId ? wb.elements.find(e => e.id === selection.selectedId) : null;
+  const activeTool = selectedEl ? selectedEl.type : wb.tool;
+
+  const updateSelectedStyle = <K extends keyof WhiteboardElement>(key: K, value: WhiteboardElement[K]) => {
+    if (selection.selectedId && selectedEl) {
+      const newElements = wb.elements.map(el => {
+        if (el.id === selection.selectedId) {
+          const updated = { ...el, [key]: value };
+          if (el.type === "text" && (key === "fontSize" || key === "fontWeight" || key === "fontStyle" || key === "text")) {
+            const fSize = (key === "fontSize" ? value : el.fontSize) as number || 16;
+            const fWeight = (key === "fontWeight" ? value : el.fontWeight) as string || "normal";
+            const fStyle = (key === "fontStyle" ? value : el.fontStyle) as string || "normal";
+            const measured = measureTextElement(el.text || "", fSize, fWeight, fStyle);
+            updated.textWidth = measured.width;
+            updated.textHeight = measured.height;
+          }
+          return updated;
+        }
+        return el;
+      });
+      wb.setElements(newElements);
+      wb.pushHistory(newElements);
+    }
+  };
+
   return (
-    <div ref={containerRef} className="relative w-screen h-screen overflow-hidden bg-canvas-bg select-none">
+    <div ref={containerRef} className="absolute top-0 left-0 w-screen h-screen overflow-hidden bg-canvas-bg select-none">
       <Toolbar
         tool={wb.tool}
-        setTool={wb.setTool}
+        setTool={(tool) => {
+          wb.setTool(tool);
+          if (tool !== "select") selection.deselectAll();
+        }}
         onUndo={wb.undo}
         onRedo={wb.redo}
         onClear={wb.clearCanvas}
@@ -513,23 +480,23 @@ export function App() {
         canRedo={wb.canRedo}
       />
       <StylePanel
-        tool={wb.tool}
-        strokeColor={wb.strokeColor}
-        setStrokeColor={wb.setStrokeColor}
-        fillColor={wb.fillColor}
-        setFillColor={wb.setFillColor}
-        strokeWidth={wb.strokeWidth}
-        setStrokeWidth={wb.setStrokeWidth}
-        opacity={wb.opacity}
-        setOpacity={wb.setOpacity}
-        fontSize={wb.fontSize}
-        setFontSize={wb.setFontSize}
-        fontWeight={wb.fontWeight}
-        setFontWeight={wb.setFontWeight}
-        fontStyle={wb.fontStyle}
-        setFontStyle={wb.setFontStyle}
-        fontFamily={wb.fontFamily}
-        setFontFamily={wb.setFontFamily}
+        tool={activeTool}
+        strokeColor={selectedEl?.strokeColor ?? wb.strokeColor}
+        setStrokeColor={c => { wb.setStrokeColor(c); updateSelectedStyle("strokeColor", c); }}
+        fillColor={selectedEl?.fillColor ?? wb.fillColor}
+        setFillColor={c => { wb.setFillColor(c); updateSelectedStyle("fillColor", c); }}
+        strokeWidth={selectedEl?.strokeWidth ?? wb.strokeWidth}
+        setStrokeWidth={w => { wb.setStrokeWidth(w); updateSelectedStyle("strokeWidth", w); }}
+        opacity={selectedEl?.opacity ?? wb.opacity}
+        setOpacity={o => { wb.setOpacity(o); updateSelectedStyle("opacity", o); }}
+        fontSize={selectedEl?.type === "text" && selectedEl.fontSize ? selectedEl.fontSize : wb.fontSize}
+        setFontSize={s => { wb.setFontSize(s); updateSelectedStyle("fontSize", s); }}
+        fontWeight={selectedEl?.type === "text" && selectedEl.fontWeight ? selectedEl.fontWeight : wb.fontWeight}
+        setFontWeight={w => { wb.setFontWeight(w); updateSelectedStyle("fontWeight", w); }}
+        fontStyle={selectedEl?.type === "text" && selectedEl.fontStyle ? selectedEl.fontStyle : wb.fontStyle}
+        setFontStyle={s => { wb.setFontStyle(s); updateSelectedStyle("fontStyle", s); }}
+        fontFamily={selectedEl?.type === "text" && selectedEl.fontFamily ? selectedEl.fontFamily : wb.fontFamily}
+        setFontFamily={f => { wb.setFontFamily(f); updateSelectedStyle("fontFamily", f); }}
       />
       <Canvas
         elements={textEditor?.editingId ? wb.elements.filter(el => el.id !== textEditor.editingId) : wb.elements}
@@ -610,9 +577,20 @@ export function App() {
       })()}
 
       {/* Zoom indicator */}
-      <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-toolbar-bg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-md">
-        {Math.round(wb.scale * 100)}%
+      <div className="fixed flex gap-1 top-4 right-4 z-50">
+        <div className="rounded-lg bg-toolbar-bg border border-border px-3 py-3 text-xs font-medium text-muted-foreground shadow-md">
+          {Math.round(wb.scale * 100)}%
+        </div>
+        <button
+          onClick={() => setHelpOpen(true)}
+          className="rounded-lg bg-toolbar-bg border border-border px-3 py-2 text-xs font-medium text-muted-foreground shadow-md"
+        >
+          <Info size={16} />
+        </button>
       </div>
+
+      {helpOpen && <InformationCard setHelpOpen={setHelpOpen} />}
+
 
       {/* Text editor overlay */}
       {textEditor && (
